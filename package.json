@@ -1,0 +1,21 @@
+{
+  "name": "gemini-payslip-analyzer",
+  "version": "0.1.0",
+  "description": "Analyze salary pay slips using Google Gemini vision — extracts financial insights with bounding boxes and annotates the image.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "analyze": "tsx analyze.ts"
+  },
+  "dependencies": {
+    "@google/genai": "^1.48.0",
+    "canvas": "^3.2.3",
+    "pdfjs-dist": "^4.9.155",
+    "sharp": "^0.33.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.5.0"
+  }
+}
