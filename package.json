@@ -5,7 +5,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "analyze": "tsx analyze.ts"
+    "analyze": "tsx src/analyze.ts"
   },
   "dependencies": {
     "@google/genai": "^1.48.0",

@@ -4,6 +4,8 @@ Here are 5 clear-cut, high-impact issues you can programmatically detect from th
 
 ### 1. Missing or Inaccurate Tax Credit Points (Nekudot Zikui)
 
+**Implementation note:** The analyzer implements a first pass of this check as the **Payslip Gaps** feature; see [docs/feature/payslip-gaps.md](../feature/payslip-gaps.md).
+
 **What is the issue:**
 In Israel, income tax is offset by "Nekudot Zikui" (tax credit points). Every resident is automatically entitled to a baseline number of points (2.25 for men, 2.75 for women), with each point worth 242 NIS per month (as of 2026). Employees accrue extra points for various life situations: having children, completing an academic degree, being a discharged soldier, or living in specific geographic zones. Very often, employees forget to submit an updated Form 101 at the start of the year, or HR misses the update, resulting in points reverting to zero or the baseline.
 

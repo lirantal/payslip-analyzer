@@ -2,7 +2,9 @@
 
 ## Goal
 
-Build a CLI tool that takes a salary pay slip (image or PDF, written in Hebrew), sends it to Google Gemini for multimodal analysis, extracts financially significant fields with spatial bounding box coordinates, and produces an annotated output image with color-coded highlights alongside a console summary of insights, warnings, and tips.
+Build a CLI tool that takes a salary pay slip (image or PDF, written in Hebrew), sends it to Google Gemini for multimodal analysis, extracts financially significant fields with spatial bounding box coordinates, and prints a full console dump of raw extractions. **Visual annotation** is driven by pluggable **features** (for example [Payslip Gaps](feature/payslip-gaps.md)), not by drawing every extracted insight on the image.
+
+For **low-level design** (modules, contracts, registry, how to add features), see [architecture.md](architecture.md).
 
 The target use cases for an Israeli pay slip include:
 
@@ -28,15 +30,28 @@ The target use cases for an Israeli pay slip include:
 ## Project Structure
 
 ```
-detectors-objects/gemini-payslip-analyzer/
-  ├── analyze.ts            # Main script (analysis + annotation)
-  ├── package.json          # Dependencies and scripts
-  ├── tsconfig.json         # TypeScript configuration
-  ├── .env                  # 1Password secret reference for GEMINI_API_KEY
-  ├── run.sh                # One-command runner (op + npx tsx)
+payslip-analyzer/
+  ├── analyze.ts            # Thin entry (imports src/analyze.ts for run.sh / habits)
+  ├── src/
+  │   ├── analyze.ts        # CLI: Gemini → console → features → annotate
+  │   ├── schema.ts         # Prompts + responseJsonSchema
+  │   ├── gemini.ts         # API call + normalization
+  │   ├── annotate.ts       # SVG + Sharp compositing from AnnotationSpec[]
+  │   ├── console.ts        # Console output
+  │   ├── types.ts          # Shared types
+  │   └── features/         # Pluggable annotation features
+  │       ├── registry.ts
+  │       └── payslip-gaps/ # Gap detectors (e.g. nekudot zikui)
+  ├── package.json
+  ├── tsconfig.json
+  ├── .env
+  ├── run.sh
   ├── docs/
-  │   └── project.md        # This file
-  └── README.md             # Quick-start usage docs
+  │   ├── project.md
+  │   ├── architecture.md  # Module design, feature registry, extension guide
+  │   └── feature/
+  │       └── payslip-gaps.md
+  └── README.md
 ```
 
 ## How It Works
@@ -48,15 +63,17 @@ flowchart TD
     A["CLI: npx tsx analyze.ts payslip.pdf"] --> B["Load file from disk"]
     B --> C["Base64-encode + detect MIME type"]
     C --> D["Send to Gemini API\n(gemini-2.5-flash)"]
-    D --> E["Structured JSON response\n(insights + bounding boxes + summary)"]
-    E --> F["Print console summary\n(fields, totals, warnings, tips)"]
-    E --> G{"Input is PDF?"}
+    D --> E["Structured JSON\ninsights + summary + personal_header"]
+    E --> F["Print console\nall insights + header + summary"]
+    E --> M["Run AnnotationFeature plugins\n(e.g. payslip gaps)"]
+    M --> N["Merge AnnotationSpec list"]
+    N --> G{"Input is PDF?"}
     G -- Yes --> H["Render PDF page 1 to PNG\n(pdfjs-dist + node-canvas)"]
     G -- No --> I["Read image buffer directly"]
-    H --> J["Build SVG overlay\n(colored bounding boxes + labels)"]
+    H --> J["Build SVG overlay\nfrom feature specs only"]
     I --> J
     J --> K["Composite SVG onto image\n(sharp)"]
-    K --> L["Save output_annotated.png"]
+    K --> L["Save output_annotated.png\n(cwd)"]
 ```
 
 ### Step-by-Step
@@ -71,16 +88,11 @@ flowchart TD
    - `responseMimeType: "application/json"` with a `responseJsonSchema` to enforce structured output
    - A `systemInstruction` that sets the model's role as an Israeli payslip analyst fluent in Hebrew
 
-4. **Response parsing** -- The JSON response is parsed into typed `Insight[]` and `Summary` objects. Each insight contains a `category`, `label` (Hebrew field name), `value`, `box_2d` (bounding box normalised to 0-1000), and `explanation`.
+4. **Response parsing** -- The JSON response is normalised into `AnalysisResult`: `insights[]`, `summary`, and `personal_header` (header fields such as נקודות זיכוי and employee gender for programmatic features). Each insight contains a `category`, `label`, `value`, `box_2d`, and `explanation`.
 
-5. **Console summary** -- All extracted fields are printed with their category, label, value, and explanation. The summary section shows aggregated totals for pension, Keren Hishtalmut, expense reimbursements, and net pay, plus any warnings and tips.
+5. **Console summary** -- All extracted insights are printed with category, label, value, and explanation. `personal_header` is printed under a dedicated section. The summary shows aggregated totals, warnings, and tips. Feature plugins may append lines (for example payslip gap messages).
 
-6. **Image annotation** -- For each insight with a valid bounding box:
-   - Normalised coordinates (0-1000) are converted to pixel coordinates
-   - An SVG overlay is generated with a colored rectangle (stroke) and a label badge (filled rectangle + text)
-   - Colors are assigned by category (blue = pension, green = Keren Hishtalmut, orange = expenses, etc.)
-   - The SVG is composited onto the source image using Sharp
-   - The result is saved as `output_annotated.png`
+6. **Feature-driven image annotation** -- Registered `AnnotationFeature` modules consume the parsed result and return `AnnotationSpec` entries (normalised `box_2d`, stroke colour, label). Only those specs are drawn (SVG rectangles + badges, then Sharp composite). **Payslip gap** highlights use red. If there are no specs, the raster image is still written without overlays.
 
 7. **PDF handling** -- The Gemini API natively accepts PDFs, so the raw PDF is sent for analysis. For the annotation step (which requires a raster image), the first page is rendered to a PNG buffer using `pdfjs-dist` and `node-canvas`.
 
@@ -88,9 +100,9 @@ flowchart TD
 
 The prompt is split into two parts:
 
-- **System instruction**: Establishes the model as an expert Israeli payslip analyst. Instructs it to extract every financially significant field, provide bounding boxes in `[ymin, xmin, ymax, xmax]` format normalised to 0-1000, categorise each field, and produce a summary with totals, warnings, and tips.
+- **System instruction**: Establishes the model as an expert Israeli payslip analyst. Instructs it to extract every financially significant field into `insights`, fill `summary`, and populate `personal_header` (including נקודות זיכוי with a tight `box_2d` and optional parsed `points`, plus `employee_gender` when explicitly shown on the slip).
 
-- **User prompt**: Accompanies the image/PDF. Lists the specific Hebrew terms to look for (e.g. `קרן השתלמות`, `שכר נטו`, `ביטוח לאומי`) and repeats the bounding box format requirement.
+- **User prompt**: Accompanies the image/PDF. Lists financially significant Hebrew terms and requires header extraction for נקודות זיכוי.
 
 ### Structured Output Schema
 
@@ -98,25 +110,19 @@ The Gemini response is constrained via `responseJsonSchema` to return:
 
 ```
 {
-  insights: [
-    {
-      category: "pension" | "keren_hishtalmut" | "expenses_reimbursed" | ...
-      label: "Hebrew field name"
-      value: "1,234.56"
-      box_2d: [ymin, xmin, ymax, xmax]   // normalised 0-1000
-      explanation: "Brief financial insight"
-    }
-  ],
+  insights: [ { category, label, value, box_2d, explanation } ],
   summary: {
-    total_pension: "..."
-    total_keren_hishtalmut: "..."
-    total_expenses_reimbursed: "..."
-    net_pay: "..."
-    warnings: ["..."]
-    tips: ["..."]
+    total_pension, total_keren_hishtalmut, total_expenses_reimbursed, net_pay,
+    warnings, tips
+  },
+  personal_header: {
+    tax_credit_points: { raw_text, points?, box_2d },
+    employee_gender: "male" | "female" | "unknown"
   }
 }
 ```
+
+See [docs/feature/payslip-gaps.md](feature/payslip-gaps.md) for how `personal_header` feeds gap detection.
 
 ## Requirements
 
@@ -162,8 +168,8 @@ GEMINI_API_KEY=your-key npx tsx analyze.ts path/to/payslip.pdf
 ```
 
 Output:
-- Console prints extracted fields and a financial summary
-- `output_annotated.png` is saved in the project directory with color-coded bounding boxes
+- Console prints all extracted insights, `personal_header`, summary, and feature messages
+- `output_annotated.png` is saved in the **current working directory** with bounding boxes only from registered features (payslip gaps in red)
 
 ## What We Tried and What Didn't Work
 

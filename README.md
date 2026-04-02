@@ -1,21 +1,29 @@
 # Gemini Payslip Analyzer
 
-Analyze Israeli salary pay slips using Google Gemini's multimodal vision API. The tool extracts financial insights (pension, Keren Hishtalmut, expense reimbursements, tax, etc.) with bounding box coordinates and produces an annotated output image with color-coded highlights.
+Analyze Israeli salary pay slips using Google Gemini’s multimodal API. The tool extracts financially significant fields (with bounding boxes), prints **all** raw extractions and summary data to the console, and writes an output image. **Visual highlights** come only from pluggable **features**—for example [Payslip Gaps](docs/feature/payslip-gaps.md), which draws **red** boxes on detected issues.
 
 ## Prerequisites
 
 - [Node.js](https://nodejs.org/) v20+
-- [1Password CLI (`op`)](https://developer.1password.com/docs/cli/get-started/) installed and signed in
+- [1Password CLI (`op`)](https://developer.1password.com/docs/cli/get-started/) installed and signed in (if using `run.sh`)
 - A Gemini API key stored in 1Password (the secret reference is configured in `.env`)
 
 ## Project layout
 
 ```
-├── .env                  # 1Password secret reference for GEMINI_API_KEY
-├── analyze.ts            # Main analysis script
-├── package.json          # Dependencies and scripts
-├── tsconfig.json         # TypeScript configuration
-├── run.sh                # One-command runner (wraps op + tsx)
+├── .env
+├── analyze.ts            # Entry shim (imports src/analyze.ts)
+├── src/
+│   ├── analyze.ts        # Main CLI
+│   ├── schema.ts         # Gemini prompts + JSON schema
+│   ├── gemini.ts         # API + response normalization
+│   ├── annotate.ts       # Feature-driven SVG overlay + Sharp
+│   ├── console.ts
+│   ├── types.ts
+│   └── features/         # AnnotationFeature registry + payslip-gaps
+├── package.json
+├── tsconfig.json
+├── run.sh
 └── README.md
 ```
 
@@ -37,47 +45,37 @@ Edit the vault, item, and field names to match your 1Password setup.
 
 ## Running
 
-The quickest way — just run the wrapper script with a path to your payslip:
-
 ```bash
 ./run.sh path/to/payslip.png
 ```
 
-Or run directly with your API key:
+Or:
 
 ```bash
 GEMINI_API_KEY=your-key npx tsx analyze.ts path/to/payslip.png
+# or
+GEMINI_API_KEY=your-key npm run analyze -- path/to/payslip.png
 ```
 
 ### Supported formats
 
 - **Images:** PNG, JPEG, WebP
-- **Documents:** PDF (sent natively to Gemini — no conversion needed)
+- **Documents:** PDF (sent natively to Gemini; first page is rasterized for annotation)
 
 ## How it works
 
-1. The payslip file is loaded and sent to the Gemini API (`gemini-2.5-flash`) with a structured prompt requesting financial field extraction
-2. Temperature is set to 0 for deterministic, precise extraction
-3. Gemini returns a JSON response containing extracted fields, each with:
-   - A category (pension, keren_hishtalmut, expenses_reimbursed, etc.)
-   - The Hebrew label as it appears on the payslip
-   - The monetary value
-   - A bounding box in `[ymin, xmin, ymax, xmax]` format normalised to 0-1000
-   - A brief financial insight
-4. A summary is printed to the console with totals, warnings, and tips
-5. An SVG overlay with color-coded bounding boxes and labels is composited onto the original image using Sharp
-6. The annotated image is saved as `output_annotated.png`
+1. The payslip is sent to `gemini-2.5-flash` with `responseJsonSchema` for structured JSON: `insights`, `summary`, and `personal_header` (header fields such as נקודות זיכוי for programmatic checks).
+2. Temperature is `0` for stable extraction.
+3. The CLI prints every insight, `personal_header`, and the summary (totals, warnings, tips).
+4. Registered **features** (see `src/features/registry.ts`) produce `AnnotationSpec` overlays only when they detect something to highlight.
+5. An SVG overlay is composited with Sharp and saved as **`output_annotated.png`** in the **current working directory**. If no feature returns boxes, the image is still saved without overlays.
 
-## Category color coding
+## Payslip Gaps (red annotations)
 
-| Category | Color |
-|---|---|
-| Pension | Blue |
-| Keren Hishtalmut | Green |
-| Expenses Reimbursed | Orange |
-| Net Pay | Purple |
-| Gross Pay | Cyan |
-| Tax | Red |
-| Social Security | Yellow |
-| Health Insurance | Pink |
-| Other | Gray |
+Automated checks for high-impact payroll issues are documented in [docs/feature/payslip-gaps.md](docs/feature/payslip-gaps.md). The first implemented rule flags likely problems with **נקודות זיכוי** (tax credit points).
+
+Module layout, contracts, and how to add features are described in [docs/architecture.md](docs/architecture.md).
+
+## Category colors (historical note)
+
+The MVP drew every insight with category-based colors. **That behavior is removed:** category colours are no longer used for default annotation; only feature-supplied colours apply (payslip gaps use red).
