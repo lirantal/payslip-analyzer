@@ -1,6 +1,11 @@
 import { GoogleGenAI } from "@google/genai";
 import { RESPONSE_SCHEMA, SYSTEM_INSTRUCTION, USER_PROMPT } from "./schema.js";
-import type { AnalysisResult, PersonalHeader, Summary } from "./types.js";
+import type {
+  AnalysisResult,
+  EmployeeGender,
+  PensionMoneyField,
+  Summary,
+} from "./types.js";
 
 const EMPTY_SUMMARY: Summary = {
   total_pension: "",
@@ -11,12 +16,17 @@ const EMPTY_SUMMARY: Summary = {
   tips: [],
 };
 
-const EMPTY_PERSONAL_HEADER: PersonalHeader = {
-  tax_credit_points: { raw_text: "", box_2d: [] },
-  employee_gender: "unknown",
-};
+function normalizePensionMoneyField(raw: Partial<PensionMoneyField> | undefined): PensionMoneyField {
+  return {
+    raw_text: raw?.raw_text ?? "",
+    ...(typeof raw?.amount_ils === "number" && Number.isFinite(raw.amount_ils)
+      ? { amount_ils: raw.amount_ils }
+      : {}),
+    box_2d: Array.isArray(raw?.box_2d) ? raw!.box_2d : [],
+  };
+}
 
-function normalizeGender(g: string | undefined): PersonalHeader["employee_gender"] {
+function normalizeGender(g: string | undefined): EmployeeGender {
   const v = (g ?? "unknown").toLowerCase().trim();
   if (v === "male" || v === "female" || v === "unknown") return v;
   return "unknown";
@@ -27,6 +37,7 @@ export function normalizeAnalysisResult(raw: unknown): AnalysisResult {
   const o = raw as Partial<AnalysisResult>;
   const ph = o.personal_header;
   const tcp = ph?.tax_credit_points;
+  const pc = ph?.pension_compliance;
 
   return {
     insights: Array.isArray(o.insights) ? o.insights : [],
@@ -38,6 +49,11 @@ export function normalizeAnalysisResult(raw: unknown): AnalysisResult {
         box_2d: Array.isArray(tcp?.box_2d) ? tcp!.box_2d : [],
       },
       employee_gender: normalizeGender(ph?.employee_gender),
+      pension_compliance: {
+        pensionable_salary: normalizePensionMoneyField(pc?.pensionable_salary),
+        employer_tagmulim: normalizePensionMoneyField(pc?.employer_tagmulim),
+        employee_pension_deduction: normalizePensionMoneyField(pc?.employee_pension_deduction),
+      },
     },
   };
 }

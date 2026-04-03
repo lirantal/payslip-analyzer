@@ -72,7 +72,7 @@ GEMINI_API_KEY=your-key npm run analyze -- path/to/payslip.png
 
 ## Payslip Gaps (red annotations)
 
-Automated checks for high-impact payroll issues are documented in [docs/feature/payslip-gaps.md](docs/feature/payslip-gaps.md). The first implemented rule flags likely problems with **נקודות זיכוי** (tax credit points).
+Automated checks for high-impact payroll issues are documented in [docs/feature/payslip-gaps.md](docs/feature/payslip-gaps.md). Implemented rules include **נקודות זיכוי** (tax credit points) and **pension contribution ratios** vs pensionable salary ([docs/feature/pension-contribution-ratios.md](docs/feature/pension-contribution-ratios.md)).
 
 Module layout, contracts, and how to add features are described in [docs/architecture.md](docs/architecture.md). Bounding-box accuracy (shared raster, crop refinement, what not to do) is in [docs/bounding_boxes.md](docs/bounding_boxes.md).
 

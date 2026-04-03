@@ -2,9 +2,10 @@ import type { AnnotationFeature, AnnotationFeatureContext } from "../feature-typ
 import type { AnnotationSpec } from "../../types.js";
 import { GAP_ID_NEKUDOT_ZIKUI } from "./constants.js";
 import { detectNekudotZikuiGap } from "./detectors/nekudot-zikui.js";
+import { detectPensionContributionRatiosGap } from "./detectors/pension-contribution-ratios.js";
 import { refineNekudotBoxOnRaster } from "./refine-nekudot-box.js";
 
-const DETECTORS = [detectNekudotZikuiGap] as const;
+const DETECTORS = [detectNekudotZikuiGap, detectPensionContributionRatiosGap] as const;
 
 export const payslipGapsFeature: AnnotationFeature = {
   id: "payslip_gaps",

@@ -20,6 +20,8 @@ The employee is needlessly overpaying **מס הכנסה** (Mas Hachnasa / Income
 
 ### 2. Incorrect Pension Contribution Ratios (Mandatory Minimums)
 
+**Implementation note:** The analyzer implements employer **tagmulim** (6.5%) and employee pension (6%) vs **pensionable salary** as **Payslip Gap 2**; see [docs/feature/pension-contribution-ratios.md](../feature/pension-contribution-ratios.md) and [docs/feature/payslip-gaps.md](../feature/payslip-gaps.md). Employer **pitzuyim** (6%) is not checked in v1.
+
 **What is the issue:**
 By law, employers in Israel must contribute a minimum percentage to an employee's pension fund. The statutory minimums are 6.5% for the employer's pension contribution (Tagmulim), 6% for the employer's severance contribution (Pitzuyim, usually governed under Section 14), and a 6% deduction from the employee. Some employers illegally cap the salary baseline used for this calculation below the actual gross salary, or fail to meet the 6.5% threshold.
 

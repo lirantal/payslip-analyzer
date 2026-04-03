@@ -30,9 +30,31 @@ export interface TaxCreditPointsField {
 
 export type EmployeeGender = "male" | "female" | "unknown";
 
+/** One monetary cell on the slip (pension compliance / payslip gaps). */
+export interface PensionMoneyField {
+  raw_text: string;
+  /**
+   * Parsed amount in NIS when clearly readable; omit if not reliably parseable.
+   * If the slip splits employer pension across lines, use the sum for tagmulim.
+   */
+  amount_ils?: number;
+  box_2d: number[];
+}
+
+/** Structured fields for statutory pension ratio checks (employer tagmulim vs base, employee vs base). */
+export interface PensionCompliance {
+  /** שכר פנסיוני / שכר יסוד — denominator for percentages. */
+  pensionable_salary: PensionMoneyField;
+  /** Employer pension to the fund: פנסיה / תגמולים in הפרשות מעסיק / קופות גמל (not קרן השתלמות). */
+  employer_tagmulim: PensionMoneyField;
+  /** Employee pension deduction from ניכויים. */
+  employee_pension_deduction: PensionMoneyField;
+}
+
 export interface PersonalHeader {
   tax_credit_points: TaxCreditPointsField;
   employee_gender: EmployeeGender;
+  pension_compliance: PensionCompliance;
 }
 
 export interface AnalysisResult {

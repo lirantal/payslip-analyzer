@@ -54,7 +54,8 @@ payslip-analyzer/
   │   ├── architecture.md   # Module design, feature registry, extension guide
   │   ├── bounding_boxes.md # Accurate overlays: same raster, crop 2nd pass, pitfalls
   │   └── feature/
-  │       └── payslip-gaps.md
+  │       ├── payslip-gaps.md
+  │       └── pension-contribution-ratios.md
   └── README.md
 ```
 
@@ -100,7 +101,7 @@ flowchart TD
 
 The prompt is split into two parts:
 
-- **System instruction**: Establishes the model as an expert Israeli payslip analyst. Instructs it to extract every financially significant field into `insights`, fill `summary`, and populate `personal_header` (including נקודות זיכוי with a tight `box_2d` and optional parsed `points`, plus `employee_gender` when explicitly shown on the slip).
+- **System instruction**: Establishes the model as an expert Israeli payslip analyst. Instructs it to extract every financially significant field into `insights`, fill `summary`, and populate `personal_header` (including נקודות זיכוי with a tight `box_2d` and optional parsed `points`, `employee_gender` when explicitly shown, and **`pension_compliance`** for pension-ratio checks — see [feature/pension-contribution-ratios.md](feature/pension-contribution-ratios.md)).
 
 - **User prompt**: Accompanies the image/PDF. Lists financially significant Hebrew terms and requires header extraction for נקודות זיכוי.
 
@@ -117,12 +118,17 @@ The Gemini response is constrained via `responseJsonSchema` to return:
   },
   personal_header: {
     tax_credit_points: { raw_text, points?, box_2d },
-    employee_gender: "male" | "female" | "unknown"
+    employee_gender: "male" | "female" | "unknown",
+    pension_compliance: {
+      pensionable_salary: { raw_text, amount_ils?, box_2d },
+      employer_tagmulim: { raw_text, amount_ils?, box_2d },
+      employee_pension_deduction: { raw_text, amount_ils?, box_2d }
+    }
   }
 }
 ```
 
-See [docs/feature/payslip-gaps.md](feature/payslip-gaps.md) for how `personal_header` feeds gap detection.
+See [docs/feature/payslip-gaps.md](feature/payslip-gaps.md) for how `personal_header` feeds gap detection; pension fields are detailed in [feature/pension-contribution-ratios.md](feature/pension-contribution-ratios.md).
 
 ## Requirements
 

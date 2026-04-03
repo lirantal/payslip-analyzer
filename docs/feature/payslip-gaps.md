@@ -76,3 +76,23 @@ If a gap is detected but `box_2d` is invalid, the issue is **console-only** (no 
 ### Detector implementation
 
 [`../../src/features/payslip-gaps/detectors/nekudot-zikui.ts`](../../src/features/payslip-gaps/detectors/nekudot-zikui.ts)
+
+---
+
+## Gap 2: Incorrect pension contribution ratios (mandatory minimums)
+
+Full write-up: [pension-contribution-ratios.md](pension-contribution-ratios.md).
+
+### Parent data requirements
+
+| Field | Source in API | Purpose |
+|--------|----------------|--------|
+| Pensionable base | `personal_header.pension_compliance.pensionable_salary` | `raw_text`, optional `amount_ils`, `box_2d` on the base amount |
+| Employer tagmulim | `personal_header.pension_compliance.employer_tagmulim` | Employer **פנסיה** / **תגמולים** only; sum split lines into `amount_ils` |
+| Employee pension deduction | `personal_header.pension_compliance.employee_pension_deduction` | Employee pension under **ניכויים** |
+
+If any `amount_ils` is missing or the base is not positive, the detector **does not** flag a gap.
+
+### Detector implementation
+
+[`../../src/features/payslip-gaps/detectors/pension-contribution-ratios.ts`](../../src/features/payslip-gaps/detectors/pension-contribution-ratios.ts)

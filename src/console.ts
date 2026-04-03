@@ -23,6 +23,14 @@ export function printSummary(result: AnalysisResult): void {
   );
   console.log(`  Employee gender:        ${ph.employee_gender}`);
 
+  const pc = ph.pension_compliance;
+  const fmtMoney = (f: { raw_text: string; amount_ils?: number }) =>
+    typeof f.amount_ils === "number" ? `${f.amount_ils} NIS` : f.raw_text || "(empty)";
+  console.log("\n  Pension compliance (programmatic):");
+  console.log(`    Pensionable base:           ${fmtMoney(pc.pensionable_salary)}`);
+  console.log(`    Employer tagmulim:          ${fmtMoney(pc.employer_tagmulim)}`);
+  console.log(`    Employee pension deduction: ${fmtMoney(pc.employee_pension_deduction)}`);
+
   const s = result.summary;
   console.log("\n--- Summary ---");
   console.log(`  Total Pension:             ${s.total_pension}`);

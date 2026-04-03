@@ -197,7 +197,7 @@ The CLI loop awaits each feature and passes **`rasterBuffer`**.
 
 **Folder:** [`src/features/payslip-gaps/`](../src/features/payslip-gaps/)
 
-The exported **`payslipGapsFeature`** is one `AnnotationFeature`. Internally it runs a **`DETECTORS`** array (one file per rule):
+The exported **`payslipGapsFeature`** is one `AnnotationFeature`. Internally it runs a **`DETECTORS`** array (one file per rule), e.g. [`nekudot-zikui.ts`](../src/features/payslip-gaps/detectors/nekudot-zikui.ts) and [`pension-contribution-ratios.ts`](../src/features/payslip-gaps/detectors/pension-contribution-ratios.ts).
 
 - Add a new gap: create `detectors/<rule>.ts`, implement a function `(analysis: AnalysisResult) => { messages, annotations }`, register it in [`index.ts`](../src/features/payslip-gaps/index.ts).
 
@@ -269,5 +269,6 @@ Keep console formatting changes localized to `console.ts` so extraction and feat
 ## Related documents
 
 - [project.md](project.md) — product overview, stack, operational notes
-- [feature/payslip-gaps.md](feature/payslip-gaps.md) — first feature: rules, parent fields, extension notes
+- [feature/payslip-gaps.md](feature/payslip-gaps.md) — payslip gaps index (multiple detectors)
+- [feature/pension-contribution-ratios.md](feature/pension-contribution-ratios.md) — Gap 2: employer/employee pension vs base
 - [research/5-top-issues-in-israeli-payslips.md](research/5-top-issues-in-israeli-payslips.md) — backlog of candidate gap rules
