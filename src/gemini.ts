@@ -1,6 +1,4 @@
 import { GoogleGenAI } from "@google/genai";
-import * as path from "path";
-import { loadFileAsBase64, getMimeType } from "./mime.js";
 import { RESPONSE_SCHEMA, SYSTEM_INSTRUCTION, USER_PROMPT } from "./schema.js";
 import type { AnalysisResult, PersonalHeader, Summary } from "./types.js";
 
@@ -44,17 +42,26 @@ export function normalizeAnalysisResult(raw: unknown): AnalysisResult {
   };
 }
 
-export async function analyzePayslip(filePath: string): Promise<AnalysisResult> {
+export interface GeminiInlinePayload {
+  mimeType: string;
+  data: string;
+}
+
+/**
+ * Runs structured extraction. The inline image/PDF bytes must match the raster used for annotation
+ * (see preparePayslipForPipeline — PDFs are sent as PNG so box_2d aligns with pdf.js output).
+ */
+export async function analyzePayslip(
+  inline: GeminiInlinePayload,
+  logBasename: string,
+): Promise<AnalysisResult> {
   const ai = new GoogleGenAI({});
 
-  const mimeType = getMimeType(filePath);
-  const data = loadFileAsBase64(filePath);
-
-  console.log(`Sending ${path.basename(filePath)} (${mimeType}) to Gemini for analysis ...`);
+  console.log(`Sending ${logBasename} (${inline.mimeType}) to Gemini for analysis ...`);
 
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash",
-    contents: [{ inlineData: { mimeType, data } }, USER_PROMPT],
+    contents: [{ inlineData: { mimeType: inline.mimeType, data: inline.data } }, USER_PROMPT],
     config: {
       temperature: 0,
       responseMimeType: "application/json",

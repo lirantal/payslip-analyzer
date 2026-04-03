@@ -49,4 +49,8 @@ export interface AnnotationSpec {
   strokeColor: string;
   /** Short label on the badge. */
   label: string;
+  /**
+   * When true, draw the caption below the rectangle first (avoids covering header text above the value).
+   */
+  preferLabelBelow?: boolean;
 }

@@ -1,4 +1,3 @@
-import * as fs from "fs";
 import * as path from "path";
 
 export function getMimeType(filePath: string): string {
@@ -16,8 +15,4 @@ export function getMimeType(filePath: string): string {
     process.exit(1);
   }
   return mime;
-}
-
-export function loadFileAsBase64(filePath: string): string {
-  return Buffer.from(fs.readFileSync(filePath)).toString("base64");
 }

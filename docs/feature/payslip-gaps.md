@@ -18,9 +18,10 @@ This feature turns slip data into **actionable, explainable flags** plus **on-sl
 
 1. **Gemini** returns a single JSON object matching the app schema: `insights`, `summary`, and **`personal_header`** (header fields used for programmatic checks).
 2. The CLI prints **all** insights and summary lines for debugging and insight (unchanged intent).
-3. Registered **`AnnotationFeature`** modules run against the parsed result; each returns `AnnotationSpec[]` (box, color, label) and optional log lines.
-4. **`annotateImage`** composites only those specs onto the raster payslip (PDF page 1 is rendered first when needed).
-5. If there are **no** annotations, the tool still writes **`output_annotated.png`** as a raster copy of the slip (no overlays).
+3. Registered **`AnnotationFeature`** modules run **async** against the parsed result and the **same `rasterBuffer`**; each returns `AnnotationSpec[]` (box, color, label) and optional log lines.
+4. For **נ״ז**, a **second Gemini call** on a **local image crop** (expanded from the coarse box, or a default ROI) refines `box_2d` before drawing — full-page coordinates from the first pass are often imprecise on dense forms. Disable with `DISABLE_NEKUDOT_BOX_REFINE=true` if needed.
+5. **`annotateImage`** composites only those specs onto the **same** raster that was sent to Gemini (for PDFs, page 1 is rendered once in `preparePayslipForPipeline`).
+6. If there are **no** annotations, the tool still writes **`output_annotated.png`** as a raster copy of the slip (no overlays).
 
 ### Extending with a new gap
 
@@ -40,8 +41,19 @@ New **non-gap** features can be added by implementing `AnnotationFeature` and ap
 |--------|----------------|--------|
 | נקודות זיכוי raw text | `personal_header.tax_credit_points.raw_text` | Audit / debug |
 | Parsed points | `personal_header.tax_credit_points.points` | Only set when the model can parse a reliable number; **omit** if illegible |
-| Box around the value | `personal_header.tax_credit_points.box_2d` | Red annotation on the slip |
+| Box around the value | `personal_header.tax_credit_points.box_2d` | Red annotation on the slip (see reconciliation below) |
 | Employee gender | `personal_header.employee_gender` | `male` / `female` / `unknown` from explicit slip fields only |
+| Duplicate insight row | `insights[]` item whose label is נקודות זיכוי or **נ״ז** | Prompted for self-consistency; used to fix wrong header `0` / spurious top-of-page boxes |
+
+On many Israeli payslips the field appears as the abbreviation **נ״ז** (with Hebrew gershayim between nun and zayin). Prompts and schema instruct the model to look for both full and abbreviated labels and to wrap **only the numeric cell**, not the row below.
+
+### Reconciliation (implementation)
+
+The detector [`tax-credit-resolve.ts`](../../src/features/payslip-gaps/tax-credit-resolve.ts) may:
+
+- **Replace points** when `personal_header` says `0` but an insights row for נקודות זיכוי parses to a positive number (common model inconsistency).
+- **Replace `box_2d`** when the header box is missing, invalid, or lies in the **extreme top strip** (normalized `ymin` &lt; ~45/1000), which usually indicates a wrong “0” (logo band, reference line), not the real tax-credit cell.
+- **Skip drawing** if no safe box remains (console-only gap message).
 
 Constants (for messaging and future calculators): baseline **2.25** (male) / **2.75** (female); **242 NIS** per point per month (2026 context)—see [`../../src/features/payslip-gaps/constants.ts`](../../src/features/payslip-gaps/constants.ts).
 

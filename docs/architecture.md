@@ -2,7 +2,7 @@
 
 This document describes the **low-level design** of the CLI after the extraction vs. annotation split and the **feature registry** refactor. Use it when adding features, extending the Gemini schema, or changing how overlays are produced.
 
-For product context and run instructions, see [project.md](project.md). For the Payslip Gaps feature specifically, see [feature/payslip-gaps.md](feature/payslip-gaps.md).
+For product context and run instructions, see [project.md](project.md). For the Payslip Gaps feature specifically, see [feature/payslip-gaps.md](feature/payslip-gaps.md). For **accurate bounding boxes** (shared raster, crop refinement, pitfalls), see [bounding_boxes.md](bounding_boxes.md).
 
 ---
 
@@ -20,11 +20,12 @@ For product context and run instructions, see [project.md](project.md). For the 
 | Layer | Responsibility | Primary modules |
 |--------|----------------|-----------------|
 | **Entry** | Parse CLI args, resolve paths, orchestrate the pipeline | `src/analyze.ts`, root `analyze.ts` (shim) |
-| **Extraction** | MIME detection, base64 payload, Gemini API, JSON parse + normalize | `src/gemini.ts`, `src/schema.ts`, `src/mime.ts` |
+| **Input prep** | One raster + Gemini inline payload (PDF page 1 → PNG once) | `src/payslip-input.ts`, `src/pdf-render.ts`, `src/mime.ts` |
+| **Extraction** | Gemini API, JSON parse + normalize | `src/gemini.ts`, `src/schema.ts` |
 | **Domain types** | Shared TypeScript contracts | `src/types.ts` |
 | **Presentation (console)** | Human-readable dump of extraction + feature log lines | `src/console.ts` |
 | **Features** | Derive overlays and messages from `AnalysisResult` | `src/features/*` |
-| **Rendering** | Raster source image, SVG overlay, Sharp composite | `src/annotate.ts` |
+| **Rendering** | Normalized box → pixels, SVG overlay, Sharp composite | `src/annotate.ts`, `src/box2d.ts` |
 
 ---
 
@@ -35,15 +36,16 @@ Sequence of operations in `src/analyze.ts`:
 ```mermaid
 sequenceDiagram
   participant CLI as analyze.ts
+  participant Prep as payslip-input.ts
   participant Gem as gemini.ts
-  participant Sch as schema.ts
   participant Con as console.ts
   participant Reg as registry.ts
   participant Feat as AnnotationFeature
   participant Ann as annotate.ts
 
-  CLI->>Gem: analyzePayslip(path)
-  Gem->>Sch: RESPONSE_SCHEMA prompts
+  CLI->>Prep: preparePayslipForPipeline(path)
+  Prep-->>CLI: geminiInline rasterBuffer
+  CLI->>Gem: analyzePayslip(inline basename)
   Gem->>Gem: normalizeAnalysisResult
   Gem-->>CLI: AnalysisResult
   CLI->>Con: printSummary(result)
@@ -53,8 +55,10 @@ sequenceDiagram
     Feat-->>CLI: annotations logLines
   end
   CLI->>Con: printFeatureLogs(lines)
-  CLI->>Ann: annotateImage(path specs outputPath)
+  CLI->>Ann: annotateImage(rasterBuffer specs outputPath)
 ```
+
+Features may call Gemini again on crops (`payslip_gaps` refines נ״ז boxes); the diagram omits that for clarity.
 
 ---
 
@@ -69,10 +73,15 @@ flowchart TB
     Main[src/analyze.ts]
   end
 
+  subgraph inputPrep [Input prep]
+    Prepare[src/payslip-input.ts]
+    PdfRender[src/pdf-render.ts]
+    Mime[src/mime.ts]
+  end
+
   subgraph extraction [Extraction]
     Gemini[src/gemini.ts]
     Schema[src/schema.ts]
-    Mime[src/mime.ts]
   end
 
   subgraph core [Core types]
@@ -85,6 +94,7 @@ flowchart TB
 
   subgraph rendering [Rendering]
     Annotate[src/annotate.ts]
+    Box2d[src/box2d.ts]
   end
 
   subgraph features [Features]
@@ -95,15 +105,17 @@ flowchart TB
   end
 
   RootAnalyze --> Main
+  Main --> Prepare
   Main --> Gemini
   Main --> Console
   Main --> Annotate
   Main --> Registry
+  Prepare --> Mime
+  Prepare --> PdfRender
   Gemini --> Schema
-  Gemini --> Mime
   Gemini --> Types
   Console --> Types
-  Annotate --> Mime
+  Annotate --> Box2d
   Annotate --> Types
   Registry --> FeatureTypes
   Registry --> PayslipGaps
@@ -117,8 +129,8 @@ flowchart TB
 
 Notes:
 
-- **`schema.ts`** is the only module that depends on **`@google/genai`** for `Type` (schema construction). **`gemini.ts`** uses `GoogleGenAI` for the API client.
-- **`annotate.ts`** depends on **`sharp`**, **`canvas`**, and dynamic **`pdfjs-dist`** for PDF rasterization.
+- **`schema.ts`** and **`gemini-json.ts`** use **`@google/genai`** for `Type` / `GoogleGenAI`. **`gemini.ts`** is the main extraction client.
+- **`annotate.ts`** depends on **`sharp`** and **`box2d.ts`**. **`pdf-render.ts`** (pdf.js + **`canvas`**) is used only from **`payslip-input.ts`** when the input is a PDF.
 - **Feature modules** must not import **`annotate.ts`**; they only return data (`AnnotationSpec[]`). Rendering stays in one place.
 
 ---
@@ -145,6 +157,7 @@ What the **SVG/Sharp pipeline** understands:
 | `box_2d` | `[ymin, xmin, ymax, xmax]` normalized **0–1000** (Gemini convention) |
 | `strokeColor` | Rectangle and label badge color (payslip gaps use red) |
 | `label` | Short text on the badge |
+| `preferLabelBelow` | Optional: place caption below the rect first (e.g. נ״ז so headers stay readable) |
 
 Invalid or missing boxes are **dropped** in `annotate.ts` before drawing; features should still log issues when a gap exists but no box is available.
 
@@ -154,10 +167,11 @@ Plugin interface:
 
 ```text
 id: string
-run(ctx: { analysis: AnalysisResult }) → { annotations: AnnotationSpec[], logLines?: string[] }
+run(ctx: { analysis: AnalysisResult, rasterBuffer: Buffer }) → Promise<{ annotations, logLines? }>
 ```
 
-- **Idempotent expectation:** `run` should be a pure function of `analysis` (no hidden global state) unless you deliberately add services later.
+- **`rasterBuffer`:** same PNG/JPEG bytes as the main Gemini call — use for crop-based refinement or any vision step.
+- **`run` is async** so features may perform extra API calls (e.g. payslip gaps second pass on a crop).
 - **Ordering:** `src/analyze.ts` merges lists in **registry order**; overlapping boxes are simply drawn in that order (no z-index logic yet).
 
 ---
@@ -175,7 +189,7 @@ To add a **new top-level capability** (e.g. “highlight voluntary deductions”
 1. Implement `AnnotationFeature` in a new module under `src/features/<name>/`.
 2. Import it in `registry.ts` and append to `annotationFeatures`.
 
-The CLI loop does not need to change.
+The CLI loop awaits each feature and passes **`rasterBuffer`**.
 
 ---
 
@@ -187,6 +201,8 @@ The exported **`payslipGapsFeature`** is one `AnnotationFeature`. Internally it 
 
 - Add a new gap: create `detectors/<rule>.ts`, implement a function `(analysis: AnalysisResult) => { messages, annotations }`, register it in [`index.ts`](../src/features/payslip-gaps/index.ts).
 
+**נ״ז spatial refinement:** After detectors emit a `gap_nekudot_zikui` annotation, [`refine-nekudot-box.ts`](../src/features/payslip-gaps/refine-nekudot-box.ts) extracts an expanded crop from **`rasterBuffer`**, calls Gemini again via [`gemini-json.ts`](../src/gemini-json.ts) with a minimal schema, and maps the crop-local `box_2d` back to full-image coordinates. This addresses weak full-page bounding boxes on dense Hebrew tables. Set **`DISABLE_NEKUDOT_BOX_REFINE=true`** to skip the extra call (cost/latency).
+
 This keeps **`registry.ts`** stable and avoids a single large “gaps” file.
 
 ---
@@ -196,8 +212,11 @@ This keeps **`registry.ts`** stable and avoids a single large “gaps” file.
 | Piece | File | Role |
 |--------|------|------|
 | Prompts + JSON schema | `src/schema.ts` | `SYSTEM_INSTRUCTION`, `USER_PROMPT`, `RESPONSE_SCHEMA` |
-| HTTP call + parse | `src/gemini.ts` | `analyzePayslip`, `normalizeAnalysisResult` |
-| File I/O helpers | `src/mime.ts` | `getMimeType`, `loadFileAsBase64` |
+| Shared raster + inline payload | `src/payslip-input.ts` | `preparePayslipForPipeline` |
+| PDF page 1 → PNG | `src/pdf-render.ts` | `renderPdfPageToPngBuffer`, `PDF_PAGE_RENDER_SCALE` |
+| HTTP call + parse | `src/gemini.ts` | `analyzePayslip(inline)`, `normalizeAnalysisResult` |
+| Structured JSON on one image | `src/gemini-json.ts` | Crop refinement (e.g. נ״ז second pass) |
+| Extension → MIME | `src/mime.ts` | `getMimeType` |
 
 When a detector needs **new parent fields**, update:
 
@@ -212,12 +231,18 @@ When a detector needs **new parent fields**, update:
 
 | Function | Role |
 |-----------|------|
-| `annotateImage` | Load raster (or render PDF page 1 via pdf.js + node-canvas), merge valid `AnnotationSpec`s via SVG + Sharp, write PNG |
-| `buildAnnotationSvg` | Pure: pixel dimensions + specs → SVG string |
+| `preparePayslipForPipeline` | PDF → single PNG raster (page 1); image → file bytes. Builds Gemini inline payload from the **same** buffer. |
+| `box2dToPixelRect` | Converts `[ymin, xmin, ymax, xmax]` in 0–1000 to pixel `x, y, width, height`: clamps to 0–1000, uses min/max of each axis so inverted corners still draw correctly. |
+| `annotateImage` | Takes **`rasterBuffer`** (never a path). Merges valid `AnnotationSpec`s via SVG + Sharp, writes PNG. |
+| `buildAnnotationSvg` | Pure: width, height, specs → SVG string |
 
 **Output path:** `path.join(process.cwd(), "output_annotated.png")` — relative to the **process working directory**, not the script file.
 
 **Empty specs:** The image is still written (raster copy without overlays) so PDF/image inputs behave consistently.
+
+### Why PDFs become PNG before Gemini
+
+Gemini can accept PDFs directly, but its internal rasterization does not necessarily match pdf.js + node-canvas output. Normalized `box_2d` values are only meaningful relative to the **exact** bitmap used for analysis. Sending the same PNG we composite on removes systematic vertical/horizontal drift.
 
 ---
 

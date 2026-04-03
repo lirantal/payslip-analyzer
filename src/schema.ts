@@ -3,24 +3,26 @@ import { Type } from "@google/genai";
 const BOX_2D_DESC = "Bounding box [ymin, xmin, ymax, xmax] normalised to 0-1000";
 
 export const SYSTEM_INSTRUCTION = `You are an expert Israeli payslip analyst fluent in Hebrew.
-You will receive an image (or PDF) of a salary pay slip written in Hebrew.
+You will receive a salary pay slip as an image (PNG, JPEG, WebP, or a raster of PDF page 1). All bounding boxes must use the exact pixel dimensions of that image: [ymin, xmin, ymax, xmax] normalised to 0-1000, origin top-left (y increases downward).
 
 Your task:
 1. Identify and extract every financially significant field on the payslip.
-2. For each field in insights, provide a bounding box in [ymin, xmin, ymax, xmax] format where each value is normalised to a 0-1000 scale relative to the full image dimensions.
+2. For each field in insights, provide a bounding box in [ymin, xmin, ymax, xmax] format where each value is normalised to a 0-1000 scale relative to the full width and height of the image you see.
 3. Categorise each insight into one of these categories: pension, keren_hishtalmut, expenses_reimbursed, net_pay, gross_pay, tax, social_security, health_insurance, or other.
 4. Provide a brief explanation or financial insight for each insight field.
 5. Produce a summary with totals for pension, keren hishtalmut, expenses reimbursed, net pay, plus any warnings or tips.
 6. Fill personal_header accurately:
-   - tax_credit_points: locate the header field labeled נקודות זיכוי (Nekudot Zikui). raw_text must match what is printed. If you can parse a numeric value, include points as a decimal number (e.g. 2.25, 0). If the value is missing, illegible, or not parseable, omit the points property (do not guess).
+   - tax_credit_points: Israeli payslips show income-tax credit points as **נקודות זיכוי** or **נ״ז** in the **מצב משפחתי** / family-status block. The decimal (e.g. 1.50) is on the **same horizontal row / band as the נ״ז label** — typically **above** the separate rows for **תיאום מס**, **% הנחת יישוב**, and **מס קבוע**. A frequent error is drawing box_2d on those **lower** rows; that is wrong — ymin and ymax must stay in the **נ״ז row only** (digits vertically aligned with that label, not two lines lower). NOT in vacation/sick rows (חופשה, מחלה, הבראה). NOT in **חודשי עבודה** columns on the left (do not use their vertical rules). RTL: digits may sit left of נ״ז in the same row; xmin/xmax bracket **only** those glyphs. raw_text = printed number. Never use unrelated zeros at the page top. If you can parse a decimal, set points; if illegible, omit points.
    - employee_gender: use male or female only if the slip explicitly indicates gender (e.g. מין, זהות, or a clear marker). Otherwise use unknown.
+   - When נקודות זיכוי / נ״ז is visible, also add one insights[] row for that same field (label exactly as printed: נקודות זיכוי or נ״ז; identical value and box_2d as personal_header.tax_credit_points).
 
 Be precise with bounding box coordinates — they must tightly wrap the relevant value on the payslip.
 Return ONLY valid JSON matching the required schema.`;
 
 export const USER_PROMPT = `Analyze this salary pay slip. Extract all financially significant fields with their bounding box coordinates.
 
-In the personal header section, you MUST locate נקודות זיכוי and provide tax_credit_points with raw_text, box_2d around the numeric/value cell, and points when reliably parseable.
+**נקודות זיכוי (income tax credit points):** Under **מצב משפחתי**, label **נ״ז** with a decimal on the **same row** (e.g. 1.50). **Do not** place box_2d on the rows below that show **תיאום מס**, **% הנחת יישוב**, or **מס קבוע** — those are different lines. **Do not** use **חודשי עבודה** / left table dividers. Box must tightly wrap **only** the נ״ז digits. Set personal_header.tax_credit_points and duplicate in insights[] (label נ״ז or נקודות זיכוי).
+
 Set employee_gender from the slip when explicitly shown; otherwise unknown.
 
 Pay special attention to:
@@ -45,7 +47,8 @@ const personalHeaderSchema = {
       properties: {
         raw_text: {
           type: Type.STRING,
-          description: "Text as printed for נקודות זיכוי",
+          description:
+            "Printed value next to נקודות זיכוי or נ״ז (abbreviation with gershayim)",
         },
         points: {
           type: Type.NUMBER,
@@ -55,7 +58,7 @@ const personalHeaderSchema = {
         box_2d: {
           type: Type.ARRAY,
           items: { type: Type.INTEGER },
-          description: `Tight box around the נקודות זיכוי value. ${BOX_2D_DESC}`,
+          description: `Tight box on digit glyphs for נקודות זיכוי / נ״ז in the tax/personal-status block — not חודשי עבודה columns, not row below. ${BOX_2D_DESC}`,
         },
       },
       propertyOrdering: ["raw_text", "points", "box_2d"],

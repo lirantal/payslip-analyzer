@@ -4,7 +4,7 @@
 
 Build a CLI tool that takes a salary pay slip (image or PDF, written in Hebrew), sends it to Google Gemini for multimodal analysis, extracts financially significant fields with spatial bounding box coordinates, and prints a full console dump of raw extractions. **Visual annotation** is driven by pluggable **features** (for example [Payslip Gaps](feature/payslip-gaps.md)), not by drawing every extracted insight on the image.
 
-For **low-level design** (modules, contracts, registry, how to add features), see [architecture.md](architecture.md).
+For **low-level design** (modules, contracts, registry, how to add features), see [architecture.md](architecture.md). For **bounding box accuracy** (shared raster, crop refinement, anti-patterns), see [bounding_boxes.md](bounding_boxes.md).
 
 The target use cases for an Israeli pay slip include:
 
@@ -23,7 +23,7 @@ The target use cases for an Israeli pay slip include:
 | AI Model | Google Gemini `gemini-2.5-flash` | Multimodal document analysis, OCR, bounding box extraction |
 | AI SDK | `@google/genai` | Unified Google Gen AI SDK for TypeScript |
 | Image Processing | `sharp` | SVG compositing for bounding box annotation |
-| PDF Rendering | `pdfjs-dist` + `canvas` (node-canvas) | Converting PDF pages to PNG for annotation |
+| PDF Rendering | `pdfjs-dist` + `canvas` (node-canvas) | Rasterize PDF page 1 for both Gemini input and annotation (aligned boxes) |
 | TS Execution | `tsx` | Run `.ts` files directly without a build step |
 | Secret Management | 1Password CLI (`op`) | Inject `GEMINI_API_KEY` at runtime |
 
@@ -33,7 +33,10 @@ The target use cases for an Israeli pay slip include:
 payslip-analyzer/
   ├── analyze.ts            # Thin entry (imports src/analyze.ts for run.sh / habits)
   ├── src/
-  │   ├── analyze.ts        # CLI: Gemini → console → features → annotate
+  │   ├── analyze.ts        # CLI: prepare → Gemini → console → features → annotate
+  │   ├── payslip-input.ts  # Shared raster for PDF/image + Gemini inline payload
+  │   ├── pdf-render.ts     # pdf.js page 1 → PNG
+  │   ├── box2d.ts          # Normalized box → pixel rect (clamp + corner order)
   │   ├── schema.ts         # Prompts + responseJsonSchema
   │   ├── gemini.ts         # API call + normalization
   │   ├── annotate.ts       # SVG + Sharp compositing from AnnotationSpec[]
@@ -48,7 +51,8 @@ payslip-analyzer/
   ├── run.sh
   ├── docs/
   │   ├── project.md
-  │   ├── architecture.md  # Module design, feature registry, extension guide
+  │   ├── architecture.md   # Module design, feature registry, extension guide
+  │   ├── bounding_boxes.md # Accurate overlays: same raster, crop 2nd pass, pitfalls
   │   └── feature/
   │       └── payslip-gaps.md
   └── README.md
@@ -60,18 +64,14 @@ payslip-analyzer/
 
 ```mermaid
 flowchart TD
-    A["CLI: npx tsx analyze.ts payslip.pdf"] --> B["Load file from disk"]
-    B --> C["Base64-encode + detect MIME type"]
-    C --> D["Send to Gemini API\n(gemini-2.5-flash)"]
+    A["CLI: npx tsx analyze.ts payslip.pdf"] --> B["preparePayslipForPipeline"]
+    B --> C["PDF: render page 1 to PNG once;\nelse: read image bytes"]
+    C --> D["Send same raster to Gemini\n(gemini-2.5-flash)"]
     D --> E["Structured JSON\ninsights + summary + personal_header"]
     E --> F["Print console\nall insights + header + summary"]
     E --> M["Run AnnotationFeature plugins\n(e.g. payslip gaps)"]
     M --> N["Merge AnnotationSpec list"]
-    N --> G{"Input is PDF?"}
-    G -- Yes --> H["Render PDF page 1 to PNG\n(pdfjs-dist + node-canvas)"]
-    G -- No --> I["Read image buffer directly"]
-    H --> J["Build SVG overlay\nfrom feature specs only"]
-    I --> J
+    N --> J["Build SVG overlay\nfrom feature specs on same raster"]
     J --> K["Composite SVG onto image\n(sharp)"]
     K --> L["Save output_annotated.png\n(cwd)"]
 ```
@@ -80,9 +80,9 @@ flowchart TD
 
 1. **CLI argument parsing** -- The script takes a single argument: a file path to a pay slip (PNG, JPEG, WebP, or PDF).
 
-2. **File loading** -- The file is read from disk and base64-encoded. The MIME type is determined from the file extension.
+2. **Prepare input** -- For images, the file bytes are read once. For PDFs, page 1 is rendered to a PNG with pdf.js (same buffer for analysis and overlays). The buffer is base64-encoded for Gemini with the appropriate MIME type (`image/png` for rendered PDFs).
 
-3. **Gemini API call** -- The base64-encoded file is sent to `gemini-2.5-flash` as inline data, alongside a structured prompt. Key configuration:
+3. **Gemini API call** -- That inline payload is sent to `gemini-2.5-flash` alongside a structured prompt. Key configuration:
    - `temperature: 0` for deterministic extraction
    - `thinkingConfig: { thinkingBudget: 0 }` to disable the model's internal reasoning (reduces latency for extraction tasks)
    - `responseMimeType: "application/json"` with a `responseJsonSchema` to enforce structured output
@@ -94,7 +94,7 @@ flowchart TD
 
 6. **Feature-driven image annotation** -- Registered `AnnotationFeature` modules consume the parsed result and return `AnnotationSpec` entries (normalised `box_2d`, stroke colour, label). Only those specs are drawn (SVG rectangles + badges, then Sharp composite). **Payslip gap** highlights use red. If there are no specs, the raster image is still written without overlays.
 
-7. **PDF handling** -- The Gemini API natively accepts PDFs, so the raw PDF is sent for analysis. For the annotation step (which requires a raster image), the first page is rendered to a PNG buffer using `pdfjs-dist` and `node-canvas`.
+7. **PDF handling** -- The first page is rendered once with `pdfjs-dist` + `node-canvas` to a PNG buffer (scale 3× by default for sharper numbers). That **same** buffer is base64-encoded and sent to Gemini as `image/png`, then composited for annotations. This keeps normalized `box_2d` coordinates aligned with the pixels we draw on (Gemini’s internal PDF rasterization previously did not match our renderer, which caused misplaced boxes).
 
 ### Prompt Design
 
@@ -204,9 +204,9 @@ Setting `temperature: 0` is critical for this use case. You want deterministic, 
 
 ## Learnings and Insights
 
-### Gemini handles Hebrew OCR and PDFs natively
+### Gemini handles Hebrew OCR; PDFs are rasterized locally for alignment
 
-No special OCR preprocessing or language configuration was needed. The `gemini-2.5-flash` model reads Hebrew text from pay slips (including PDFs sent as raw `application/pdf` inline data) out of the box with high accuracy. The Gemini API's native PDF support means the raw file can be sent directly -- no conversion to images required on the API side.
+No special OCR preprocessing or language configuration was needed. The `gemini-2.5-flash` model reads Hebrew text from pay slip images with high accuracy. For **PDF** inputs we rasterize page 1 locally and send **PNG** to Gemini so bounding boxes (0–1000) match the same pixels used for SVG overlays. Native PDF upload to Gemini is still possible in other tools, but a single shared raster avoids coordinate drift between analysis and annotation.
 
 ### Structured output with `responseJsonSchema` is powerful
 
@@ -222,11 +222,7 @@ Sharp doesn't have native drawing APIs (no `drawRect` or `drawText`), but its SV
 
 ### The analysis and annotation pipelines have different input requirements
 
-An important architectural insight: the Gemini API can consume PDFs directly, but the image annotation pipeline needs a raster image (PNG/JPEG). This means PDF inputs require two different handling paths:
-1. **For analysis**: Send the raw PDF to Gemini as `application/pdf` inline data
-2. **For annotation**: Render the PDF to a PNG first, then draw bounding boxes on the raster image
-
-This dual-path requirement wasn't obvious upfront and was the root cause of the initial PDF annotation failure.
+**Coordinate alignment:** Annotation needs a raster. If analysis used a different PDF raster than annotation (e.g. Gemini’s internal render vs pdf.js), normalized boxes appeared shifted on the output image. **Mitigation:** one `preparePayslipForPipeline` step produces the raster used for both Gemini and Sharp (see [architecture.md](architecture.md)).
 
 ### The `@google/genai` SDK is the only current TypeScript SDK
 

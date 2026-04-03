@@ -60,11 +60,11 @@ GEMINI_API_KEY=your-key npm run analyze -- path/to/payslip.png
 ### Supported formats
 
 - **Images:** PNG, JPEG, WebP
-- **Documents:** PDF (sent natively to Gemini; first page is rasterized for annotation)
+- **Documents:** PDF (page 1 is rasterized once; the same PNG is sent to Gemini and used for annotations so boxes align)
 
 ## How it works
 
-1. The payslip is sent to `gemini-2.5-flash` with `responseJsonSchema` for structured JSON: `insights`, `summary`, and `personal_header` (header fields such as נקודות זיכוי for programmatic checks).
+1. The payslip is prepared as a single raster (PDF page 1 is rendered to PNG once). That image is sent to `gemini-2.5-flash` with `responseJsonSchema` for structured JSON: `insights`, `summary`, and `personal_header` (header fields such as נקודות זיכוי for programmatic checks).
 2. Temperature is `0` for stable extraction.
 3. The CLI prints every insight, `personal_header`, and the summary (totals, warnings, tips).
 4. Registered **features** (see `src/features/registry.ts`) produce `AnnotationSpec` overlays only when they detect something to highlight.
@@ -74,7 +74,9 @@ GEMINI_API_KEY=your-key npm run analyze -- path/to/payslip.png
 
 Automated checks for high-impact payroll issues are documented in [docs/feature/payslip-gaps.md](docs/feature/payslip-gaps.md). The first implemented rule flags likely problems with **נקודות זיכוי** (tax credit points).
 
-Module layout, contracts, and how to add features are described in [docs/architecture.md](docs/architecture.md).
+Module layout, contracts, and how to add features are described in [docs/architecture.md](docs/architecture.md). Bounding-box accuracy (shared raster, crop refinement, what not to do) is in [docs/bounding_boxes.md](docs/bounding_boxes.md).
+
+Optional: set `DISABLE_NEKUDOT_BOX_REFINE=true` to skip the extra Gemini crop pass used to tighten נ״ז boxes (saves one API call per run when a gap is drawn).
 
 ## Category colors (historical note)
 

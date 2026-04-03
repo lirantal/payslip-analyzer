@@ -6,13 +6,14 @@ import {
   GAP_ID_NEKUDOT_ZIKUI,
   NIS_PER_TAX_CREDIT_POINT_2026,
 } from "../constants.js";
-
-function validBox(box: number[]): box is [number, number, number, number] {
-  return Array.isArray(box) && box.length === 4 && box.every((n) => typeof n === "number");
-}
+import {
+  canAnnotateTaxCreditBox,
+  resolveTaxCreditForNekudot,
+} from "../tax-credit-resolve.js";
 
 /**
  * Detects missing or clearly sub-baseline נקודות זיכוי from extracted header data.
+ * Reconciles with an insights[] row labeled נקודות זיכוי when personal_header is wrong or misplaced.
  * See docs/feature/payslip-gaps.md for rules and limitations.
  */
 export function detectNekudotZikuiGap(analysis: AnalysisResult): {
@@ -22,18 +23,32 @@ export function detectNekudotZikuiGap(analysis: AnalysisResult): {
   const messages: string[] = [];
   const annotations: AnnotationSpec[] = [];
 
-  const { tax_credit_points, employee_gender } = analysis.personal_header;
-  const points = tax_credit_points.points;
+  const resolved = resolveTaxCreditForNekudot(
+    analysis.personal_header.tax_credit_points,
+    analysis.insights,
+  );
 
-  if (typeof points !== "number") {
+  if (resolved === null) {
     messages.push(
       "[Payslip gap: nekudot zikui] Skipped: numeric נקודות זיכוי not reliably parsed from slip.",
     );
     return { messages, annotations };
   }
 
-  const box = tax_credit_points.box_2d;
-  const canAnnotate = validBox(box);
+  if (resolved.reconciledPointsFromInsight) {
+    messages.push(
+      "[Payslip gap: nekudot zikui] Reconciled points/raw from insights row (personal_header disagreed or omitted).",
+    );
+  }
+  if (resolved.reconciledBoxFromInsight) {
+    messages.push(
+      "[Payslip gap: nekudot zikui] Replaced bounding box from insights row (header box missing or in extreme top strip).",
+    );
+  }
+
+  const { points, box_2d: box } = resolved;
+  const { employee_gender } = analysis.personal_header;
+  const canAnnotate = canAnnotateTaxCreditBox(box);
 
   let gapMessage: string | null = null;
   let label: string | null = null;
@@ -53,9 +68,6 @@ export function detectNekudotZikuiGap(analysis: AnalysisResult): {
       label = `נקודות זיכוי: ${points} (בעיה)`;
     }
   } else {
-    // Gender not on slip: we cannot require the female baseline (2.75) without false positives for men
-    // who may correctly have 2.25–2.74. Anything strictly below the male baseline (2.25) is suspicious
-    // for a standard resident employee either way.
     if (points === 0) {
       gapMessage =
         `Tax credit points are zero; gender on slip is unknown — verify נקודות זיכוי and Form 101 with employer.`;
@@ -75,10 +87,11 @@ export function detectNekudotZikuiGap(analysis: AnalysisResult): {
         box_2d: box,
         strokeColor: GAP_ANNOTATION_RED,
         label,
+        preferLabelBelow: true,
       });
-    } else if (!canAnnotate) {
+    } else {
       messages.push(
-        "[Payslip gap: nekudot zikui] No valid box_2d for נקודות זיכוי — issue reported in console only.",
+        "[Payslip gap: nekudot zikui] No safe box for annotation (missing, invalid, or extreme top of page). Issue is console-only.",
       );
     }
   }

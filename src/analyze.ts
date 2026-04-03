@@ -4,6 +4,7 @@ import { annotateImage } from "./annotate.js";
 import { printFeatureLogs, printSummary } from "./console.js";
 import { analyzePayslip } from "./gemini.js";
 import { annotationFeatures } from "./features/registry.js";
+import { preparePayslipForPipeline } from "./payslip-input.js";
 
 async function main(): Promise<void> {
   const filePath = process.argv[2];
@@ -23,14 +24,18 @@ async function main(): Promise<void> {
   const fileSize = fs.statSync(resolved).size;
   console.log(`File size: ${(fileSize / 1024).toFixed(1)} KB`);
 
-  const result = await analyzePayslip(resolved);
+  const prepared = await preparePayslipForPipeline(resolved);
+  const result = await analyzePayslip(prepared.geminiInline, path.basename(resolved));
   printSummary(result);
 
   const allAnnotations = [];
   const allLogLines: string[] = [];
 
   for (const feature of annotationFeatures) {
-    const { annotations, logLines } = feature.run({ analysis: result });
+    const { annotations, logLines } = await feature.run({
+      analysis: result,
+      rasterBuffer: prepared.rasterBuffer,
+    });
     allAnnotations.push(...annotations);
     if (logLines?.length) allLogLines.push(...logLines);
   }
@@ -38,7 +43,7 @@ async function main(): Promise<void> {
   printFeatureLogs(allLogLines);
 
   const outputPath = path.join(process.cwd(), "output_annotated.png");
-  await annotateImage(resolved, allAnnotations, outputPath);
+  await annotateImage(prepared.rasterBuffer, allAnnotations, outputPath);
 }
 
 main().catch((err) => {
