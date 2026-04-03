@@ -94,6 +94,10 @@ Prompts should still:
 
 For header-adjacent fields, drawing the **caption above** the box often **covers מצב משפחתי / נ״ז**. [`AnnotationSpec.preferLabelBelow`](../src/types.ts) draws the badge **under** the rectangle when possible ([`annotate.ts`](../src/annotate.ts)).
 
+### Stacking labels when badges overlap
+
+If several specs place badges at a similar vertical position (e.g. two adjacent table cells on one row), wide Hebrew labels can **overlap horizontally**. [`buildAnnotationSvg`](../src/annotate.ts) runs **2D overlap detection** on label rectangles and **pushes** labels **downward** with a small vertical gap until overlaps clear (multi-pass, clamped to the image height).
+
 ---
 
 ## Common errors to avoid (what we tried that did not suffice)
