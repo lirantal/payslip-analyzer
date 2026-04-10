@@ -1,0 +1,50 @@
+{
+  "name": "payslip-analyzer-backend",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "./scripts/deploy.sh",
+    "deploy:secrets-only": "./scripts/deploy.sh --secrets-only",
+    "deploy:deploy-only": "./scripts/deploy.sh --deploy-only",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "better-auth-gen-schema": "pnpm dlx @better-auth/cli@latest generate --config ./better-auth.config.ts --output ./src/db/schema.ts",
+    "db:generate": "bash ./scripts/drizzle-with-op.sh generate",
+    "db:migrate": "bash ./scripts/drizzle-with-op.sh migrate",
+    "db:push": "bash ./scripts/drizzle-with-op.sh push",
+    "sync-env": "./scripts/sync-env.sh",
+    "setup-r2": "./scripts/setup-r2.sh",
+    "update-cors": "./scripts/update-cors.sh",
+    "update-cors-set-origins": "./scripts/update-cors.sh \"https://myapp.com\" \"https://www.myapp.com\"",
+    "create-test-user": "pnpm exec tsx --env-file=.env scripts/create-test-user.ts",
+    "reset-password": "pnpm exec tsx --env-file=.env scripts/reset-password.ts",
+    "analyze-payslip-remote": "pnpm exec tsx --env-file=.env scripts/analyze-payslip-remote.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@cfkit/r2": "^1.0.1",
+    "@google/genai": "^1.48.0",
+    "@neondatabase/serverless": "^1.0.2",
+    "bcryptjs": "^2.4.3",
+    "better-auth": "^1.4.15",
+    "drizzle-orm": "^0.44.6",
+    "hono": "^4.9.10"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.3.0",
+    "@eslint/js": "^9.39.2",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^24.7.1",
+    "drizzle-kit": "^0.31.5",
+    "eslint": "^9.39.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.51.0",
+    "vitest": "^2.1.8",
+    "wrangler": "^4.4.0",
+    "zod": "^4.1.12"
+  }
+}

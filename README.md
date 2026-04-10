@@ -1,83 +1,111 @@
-# Gemini Payslip Analyzer
+# Upload Bucket
 
-Analyze Israeli salary pay slips using Google Gemini’s multimodal API. The tool extracts financially significant fields (with bounding boxes), prints **all** raw extractions and summary data to the console, and writes an output image. **Visual highlights** come only from pluggable **features**—for example [Payslip Gaps](docs/feature/payslip-gaps.md), which draws **red** boxes on detected issues.
+A file collection platform that enables event organizers to create shareable upload links for attendees. Attendees upload files (photos, videos, documents) that only they and the organizer can see, ensuring privacy among participants.
 
-## Prerequisites
+## Features
 
-- [Node.js](https://nodejs.org/) v20+
-- [1Password CLI (`op`)](https://developer.1password.com/docs/cli/get-started/) installed and signed in (if using `run.sh`)
-- A Gemini API key stored in 1Password (the secret reference is configured in `.env`)
+- **Easy Setup**: Create an event, share a link, receive uploads
+- **Privacy-First**: Attendees only see their own uploads
+- **Multiple Access Modes**: Anonymous, authenticated, or password-protected links
+- **Mobile-Optimized**: Fast, responsive upload experience
+- **Organizer Dashboard**: View, download, and manage all uploaded files
+- **Tier-Based Limits**: Freemium and Pro tiers with configurable quotas
 
-## Project layout
+## Tech Stack
 
-```
-├── .env
-├── analyze.ts            # Entry shim (imports src/analyze.ts)
-├── src/
-│   ├── analyze.ts        # Main CLI
-│   ├── schema.ts         # Gemini prompts + JSON schema
-│   ├── gemini.ts         # API + response normalization
-│   ├── annotate.ts       # Feature-driven SVG overlay + Sharp
-│   ├── console.ts
-│   ├── types.ts
-│   └── features/         # AnnotationFeature registry + payslip-gaps
-├── package.json
-├── tsconfig.json
-├── run.sh
-└── README.md
-```
+| Component | Technology |
+|-----------|------------|
+| Backend | [Hono](https://hono.dev) on Cloudflare Workers |
+| Frontend | [Nuxt 4](https://nuxt.com) with Nuxt UI |
+| Database | [Neon PostgreSQL](https://neon.tech) with Drizzle ORM |
+| Storage | [Cloudflare R2](https://developers.cloudflare.com/r2) |
+| Auth | [Better Auth](https://better-auth.com) |
 
-## Setup
+## Documentation
 
-Install dependencies:
+| Document | Description |
+|----------|-------------|
+| [User Guide](docs/user-guide.md) | How to use Upload Bucket as an organizer |
+| [API Reference](backend/docs/api.md) | Worker HTTP API (auth, profile, payslip) |
+| [Developer Setup](docs/development.md) | Local development and deployment guide |
+| [Admin CLI](docs/admin-cli.md) | Command-line tools for administrators |
+| [Product Spec](docs/spec.md) | Full product specification |
 
-```bash
-npm install
-```
+## Quick Start
 
-The `.env` file contains a 1Password secret reference:
+### Prerequisites
 
-```
-GEMINI_API_KEY=op://LocalDev/jskiq5neymqozozeiimfekqefq/credential
-```
+- Node.js v20+
+- pnpm v8+
+- Cloudflare account
+- Neon database
 
-Edit the vault, item, and field names to match your 1Password setup.
-
-## Running
+### Installation
 
 ```bash
-./run.sh path/to/payslip.png
+# Clone the repository
+git clone <repository-url>
+cd shindig
+
+# Install dependencies
+pnpm install
+
+# Set up environment variables
+cp backend/.dev.vars.example backend/.dev.vars
+cp frontend/.env.example frontend/.env
+# Edit both files with your credentials
+
+# Apply database migrations
+cd backend && pnpm exec drizzle-kit push
+
+# Start development servers
+pnpm exec pm2 start ecosystem.config.js
 ```
 
-Or:
+See [Developer Setup](docs/development.md) for detailed instructions.
+
+## Project Structure
+
+```
+shindig/
+├── backend/          # Hono API (Cloudflare Workers)
+├── frontend/         # Nuxt 4 SPA
+├── docs/             # Documentation
+└── packages/         # Shared packages
+```
+
+## Development
+
+### pnpm / `nuxt prepare` fails (`unstorage` / Invalid module `.pnpm/...`)
+
+The published `unstorage` drivers use relative imports such as `./utils/index.mjs`. If those files under `node_modules` instead contain specifiers starting with `.pnpm/`, the install tree is corrupted or stale. From the repo root run:
 
 ```bash
-GEMINI_API_KEY=your-key npx tsx analyze.ts path/to/payslip.png
-# or
-GEMINI_API_KEY=your-key npm run analyze -- path/to/payslip.png
+pnpm run reinstall
 ```
 
-### Supported formats
+That removes workspace `node_modules`, prunes the pnpm store, and reinstalls. If it still fails, delete `pnpm-lock.yaml` as well and run `pnpm install` again.
 
-- **Images:** PNG, JPEG, WebP
-- **Documents:** PDF (page 1 is rasterized once; the same PNG is sent to Gemini and used for annotations so boxes align)
+```bash
+# Run tests
+cd backend && pnpm run test
+cd frontend && pnpm run test
 
-## How it works
+# Lint and type check
+cd backend && pnpm run lint:fix && pnpm run typecheck
+cd frontend && pnpm run lint:fix && pnpm run typecheck
+```
 
-1. The payslip is prepared as a single raster (PDF page 1 is rendered to PNG once). That image is sent to `gemini-2.5-flash` with `responseJsonSchema` for structured JSON: `insights`, `summary`, and `personal_header` (header fields such as נקודות זיכוי for programmatic checks).
-2. Temperature is `0` for stable extraction.
-3. The CLI prints every insight, `personal_header`, and the summary (totals, warnings, tips).
-4. Registered **features** (see `src/features/registry.ts`) produce `AnnotationSpec` overlays only when they detect something to highlight.
-5. An SVG overlay is composited with Sharp and saved as **`output_annotated.png`** in the **current working directory**. If no feature returns boxes, the image is still saved without overlays.
+## Deployment
 
-## Payslip Gaps (red annotations)
+```bash
+# Deploy backend to Cloudflare Workers
+cd backend && pnpm run deploy
 
-Automated checks for high-impact payroll issues are documented in [docs/feature/payslip-gaps.md](docs/feature/payslip-gaps.md). Implemented rules include **נקודות זיכוי** (tax credit points) and **pension contribution ratios** vs pensionable salary ([docs/feature/pension-contribution-ratios.md](docs/feature/pension-contribution-ratios.md)).
+# Build frontend for production
+cd frontend && pnpm run build
+```
 
-Module layout, contracts, and how to add features are described in [docs/architecture.md](docs/architecture.md). Bounding-box accuracy (shared raster, crop refinement, what not to do) is in [docs/bounding_boxes.md](docs/bounding_boxes.md).
+## License
 
-Optional: set `DISABLE_NEKUDOT_BOX_REFINE=true` to skip the extra Gemini crop pass used to tighten נ״ז boxes (saves one API call per run when a gap is drawn).
-
-## Category colors (historical note)
-
-The MVP drew every insight with category-based colors. **That behavior is removed:** category colours are no longer used for default annotation; only feature-supplied colours apply (payslip gaps use red).
+Private - All rights reserved

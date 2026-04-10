@@ -1,0 +1,57 @@
+{
+  "payslip": {
+    "title": "Payslip analyzer",
+    "intro": "Upload a clear photo or export of your payslip as PNG, JPEG, WebP, or PDF. PDFs are converted to an image in your browser (first page only) before analysis.",
+    "analyze": "Analyze payslip",
+    "analyzedIn": "Payslip analyzed in {seconds} seconds.",
+    "reset": "Start over",
+    "analyzing": "Analyzing your payslip…",
+    "errorTitle": "Analysis failed",
+    "notifications": {
+      "tooltip": "Notifications",
+      "slideoverTitle": "Notifications",
+      "empty": "No notifications yet."
+    },
+    "upload": {
+      "dropTitle": "Drop your payslip image or PDF here",
+      "hint": "PNG, JPEG, WebP, or PDF (first page is rasterized in your browser at 3× scale for clarity).",
+      "choose": "Choose file",
+      "replace": "Replace file",
+      "clear": "Remove",
+      "pdfConverting": "Converting PDF to image…",
+      "pdfErrorTitle": "Could not read PDF",
+      "pdfError": "This PDF could not be rendered. Try another file, export as PNG, or use a photo.",
+      "unsupportedType": "Use PNG, JPEG, WebP, or PDF."
+    },
+    "overlay": {
+      "heading": "Highlighted findings",
+      "aria": "Payslip image with analysis highlights"
+    },
+    "summary": {
+      "heading": "Summary",
+      "netPay": "Net pay",
+      "pension": "Pension (summary)",
+      "keren": "Keren Hishtalmut",
+      "expenses": "Reimbursed expenses"
+    },
+    "warnings": {
+      "title": "Warnings"
+    },
+    "tips": {
+      "title": "Tips"
+    },
+    "details": {
+      "toggle": "Full analysis details",
+      "featureLogs": "Feature checks",
+      "insights": "Line items",
+      "colLabel": "Label",
+      "colValue": "Value",
+      "colCategory": "Category",
+      "personalHeader": "Personal & pension header",
+      "annotations": "Annotation specs (for future overlays)",
+      "meta": "File & record",
+      "filename": "Filename",
+      "dimensions": "Dimensions (px)"
+    }
+  }
+}

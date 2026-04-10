@@ -1,0 +1,14 @@
+myapp.com {
+	tls internal
+
+	# Route API requests to Hono server
+	handle /api/* {
+		#uri strip_prefix /api
+		reverse_proxy localhost:8787
+	}
+
+	# Route everything else to Nuxt app
+	handle {
+		reverse_proxy localhost:3005
+	}
+}

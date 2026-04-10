@@ -1,0 +1,5 @@
+---
+alwaysApply: true
+---
+
+Whenever you need to browse to the application you should navigate to https://myapp.com. The URL for the application is https://myapp.com and should not be navigated via localhost, localhost:3005 or any other localhost variation.

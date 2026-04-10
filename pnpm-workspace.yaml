@@ -1,0 +1,13 @@
+# for pnpm to manage root of the project
+packages:
+  - 'frontend'
+  - 'backend'
+
+# copied over from frontend/ directory (originaly belonged there to the nuxt scaffold)
+ignoredBuiltDependencies:
+  - '@parcel/watcher'
+  - '@tailwindcss/oxide'
+  - esbuild
+  - maplibre-gl
+  - unrs-resolver
+  - vue-demi

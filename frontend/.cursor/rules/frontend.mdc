@@ -1,0 +1,18 @@
+---
+alwaysApply: true
+---
+# Frontend Development Guidelines and Practices
+
+## Development Workflow Checklist
+
+### After Frontend Implementation
+
+1. Run lint: `pnpm run lint:fix`
+2. Run typecheck: `pnpm run typecheck`
+3. Run tests: `pnpm run test`
+4. **Browser smoke test**: Navigate to the feature and verify happy path works
+
+## Debugging the Frontend
+
+- From the project's workspace root directory you can run `pnpm run logs:frontend`
+- Browser console: Check for Vue warnings and network errors

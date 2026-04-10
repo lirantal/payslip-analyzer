@@ -1,0 +1,21 @@
+---
+alwaysApply: true
+---
+
+## Memory Management
+
+### 1. Before Any Action
+- Always start by running `read_graph` (`mcp_memory_read_graph`).
+- Analyze all relevant entities and relationships in memory.
+
+### 2. After Every Change
+- Use `create_entities` or `add_observations` to document new concepts/components.
+- Use `create_relations` to link related entities.
+- Use `delete_entities`, `delete_observations`, or `delete_relations` to remove outdated or incorrect information.
+- After each update, explain what was changed in memory and why.
+
+### 3. Memory Structure
+- Name entities specifically (e.g., `tumeguard_module_system`).
+- Observations must be full, clear sentences.
+- Relations must use active voice.
+- Always include version numbers or dates when relevant.

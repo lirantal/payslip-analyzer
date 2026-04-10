@@ -1,0 +1,309 @@
+{
+  "analysis": {
+      "insights": [
+          {
+              "category": "gross_pay",
+              "label": "שכר יסוד",
+              "value": "17,500.00",
+              "box_2d": [
+                  192,
+                  622,
+                  204,
+                  695
+              ],
+              "explanation": "This is the base salary component of the gross pay."
+          },
+          {
+              "category": "other",
+              "label": "נסיעות",
+              "value": "20.00",
+              "box_2d": [
+                  204,
+                  654,
+                  216,
+                  695
+              ],
+              "explanation": "This represents travel expenses, likely reimbursed or part of the gross pay."
+          },
+          {
+              "category": "other",
+              "label": "ביגוד",
+              "value": "450.00",
+              "box_2d": [
+                  217,
+                  645,
+                  230,
+                  695
+              ],
+              "explanation": "This is an allowance for clothing, contributing to the gross pay."
+          },
+          {
+              "category": "gross_pay",
+              "label": "סה\"כ לתשלום",
+              "value": "11,931.82",
+              "box_2d": [
+                  192,
+                  338,
+                  204,
+                  412
+              ],
+              "explanation": "This is the total amount calculated before deductions for tax and social security."
+          },
+          {
+              "category": "tax",
+              "label": "מס הכנסה שולי",
+              "value": "1,413.96",
+              "box_2d": [
+                  204,
+                  61,
+                  218,
+                  121
+              ],
+              "explanation": "This is the income tax deducted from the employee's salary."
+          },
+          {
+              "category": "social_security",
+              "label": "ביטוח לאומי",
+              "value": "481.00",
+              "box_2d": [
+                  217,
+                  71,
+                  230,
+                  121
+              ],
+              "explanation": "This is the national insurance contribution deducted from the employee's salary."
+          },
+          {
+              "category": "other",
+              "label": "מקדימה",
+              "value": "1,200.00",
+              "box_2d": [
+                  373,
+                  57,
+                  386,
+                  121
+              ],
+              "explanation": "This appears to be an advance payment or a prior deduction."
+          },
+          {
+              "category": "other",
+              "label": "ניכוי ארוחות",
+              "value": "400.00",
+              "box_2d": [
+                  387,
+                  71,
+                  400,
+                  121
+              ],
+              "explanation": "This is a deduction for meals."
+          },
+          {
+              "category": "gross_pay",
+              "label": "סה\"כ תשלומים",
+              "value": "12,681.82",
+              "box_2d": [
+                  515,
+                  57,
+                  528,
+                  121
+              ],
+              "explanation": "This represents the total gross payments before any deductions."
+          },
+          {
+              "category": "tax",
+              "label": "ניכוי חובה וגמל",
+              "value": "1,894.96",
+              "box_2d": [
+                  529,
+                  46,
+                  544,
+                  121
+              ],
+              "explanation": "This is the total mandatory deductions, including tax and pension contributions."
+          },
+          {
+              "category": "net_pay",
+              "label": "שכר נטו",
+              "value": "10,786.86",
+              "box_2d": [
+                  544,
+                  46,
+                  558,
+                  121
+              ],
+              "explanation": "This is the net salary after all mandatory deductions."
+          },
+          {
+              "category": "other",
+              "label": "סה\"כ ניכויי רשות",
+              "value": "1,600.00",
+              "box_2d": [
+                  559,
+                  57,
+                  572,
+                  121
+              ],
+              "explanation": "This is the total of optional deductions."
+          },
+          {
+              "category": "net_pay",
+              "label": "נטו לתשלום",
+              "value": "9,186.86",
+              "box_2d": [
+                  573,
+                  57,
+                  586,
+                  121
+              ],
+              "explanation": "This is the final net amount paid to the employee after all deductions."
+          },
+          {
+              "category": "tax",
+              "label": "מס הכנסה",
+              "value": "1,414.00",
+              "box_2d": [
+                  613,
+                  310,
+                  627,
+                  375
+              ],
+              "explanation": "This is the accumulated income tax for the year to date."
+          },
+          {
+              "category": "social_security",
+              "label": "ביטוח לאומי",
+              "value": "481.00",
+              "box_2d": [
+                  627,
+                  325,
+                  640,
+                  375
+              ],
+              "explanation": "This is the accumulated national insurance contribution for the year to date."
+          },
+          {
+              "category": "pension",
+              "label": "גמל 25%",
+              "value": "12,681.82",
+              "box_2d": [
+                  672,
+                  635,
+                  684,
+                  700
+              ],
+              "explanation": "This is the base salary used for calculating 25% pension contribution."
+          },
+          {
+              "category": "pension",
+              "label": "גמל 35%",
+              "value": "12,681.82",
+              "box_2d": [
+                  684,
+                  635,
+                  696,
+                  700
+              ],
+              "explanation": "This is the base salary used for calculating 35% pension contribution."
+          },
+          {
+              "category": "keren_hishtalmut",
+              "label": "ק. השתלמות",
+              "value": "12,681.82",
+              "box_2d": [
+                  696,
+                  635,
+                  708,
+                  700
+              ],
+              "explanation": "This is the base salary used for calculating Keren Hishtalmut contribution."
+          },
+          {
+              "category": "other",
+              "label": "נ\"ז",
+              "value": "1.50",
+              "box_2d": [
+                  709,
+                  446,
+                  722,
+                  570
+              ],
+              "explanation": "These are income tax credit points, reducing the employee's tax burden."
+          }
+      ],
+      "summary": {
+          "total_pension": "Not explicitly summed, but contributions are based on 12,681.82 for 25% and 35% categories.",
+          "total_keren_hishtalmut": "Based on 12,681.82",
+          "total_expenses_reimbursed": "20.00 (for נסיעות)",
+          "net_pay": "9,186.86",
+          "warnings": [],
+          "tips": [
+              "Review the breakdown of pension contributions (25% and 35%) to understand how they are calculated and allocated.",
+              "Ensure that the Keren Hishtalmut contributions are being made as expected, as this is a valuable long-term savings plan."
+          ]
+      },
+      "personal_header": {
+          "tax_credit_points": {
+              "raw_text": "1.50",
+              "points": 1.5,
+              "box_2d": [
+                  709,
+                  446,
+                  722,
+                  570
+              ]
+          },
+          "employee_gender": "unknown",
+          "pension_compliance": {
+              "pensionable_salary": {
+                  "raw_text": "17,500.00",
+                  "amount_ils": 17500,
+                  "box_2d": [
+                      192,
+                      622,
+                      204,
+                      695
+                  ]
+              },
+              "employer_tagmulim": {
+                  "raw_text": "Not explicitly listed as employer contribution, but 'גמל 25%' and 'גמל 35%' are likely employer contributions based on the context of 'הפרשות מעסיק'.",
+                  "amount_ils": 0,
+                  "box_2d": []
+              },
+              "employee_pension_deduction": {
+                  "raw_text": "Not explicitly listed as employee pension deduction under ניכויים.",
+                  "amount_ils": 0,
+                  "box_2d": []
+              }
+          }
+      }
+  },
+  "featureLogs": [
+      "[Payslip gap: nekudot zikui] Tax credit points (1.5) are below the typical minimum resident baseline (2.25; female baseline is 2.75). Gender not shown on slip — verify Form 101 and HR records (~242 NIS per point per month).",
+      "[Payslip gap: pension ratios] Employer pension (tagmulim) is 0.00% of pensionable salary — below the statutory minimum (~6.5%). This reduces retirement savings and may underfund disability coverage within the employer component.",
+      "[Payslip gap: pension ratios] Employer ratio gap: no valid box for annotation (console-only).",
+      "[Payslip gap: pension ratios] Employee pension deduction is 0.00% of pensionable salary — below the usual statutory minimum (~6%).",
+      "[Payslip gap: pension ratios] Employee ratio gap: no valid box for annotation (console-only)."
+  ],
+  "annotationSpecs": [
+      {
+          "id": "gap_nekudot_zikui",
+          "box_2d": [
+              709,
+              446,
+              722,
+              570
+          ],
+          "strokeColor": "#DC2626",
+          "label": "נקודות זיכוי: 1.5 (בדוק)",
+          "preferLabelBelow": true
+      }
+  ],
+  "meta": {
+      "originalFilename": "payslip-known-bad1-image.png",
+      "mimeType": "image/png",
+      "rasterMimeType": "image/png",
+      "width": 2479,
+      "height": 3508
+  },
+  "recordId": "b2a1ee09-60e1-4d9e-9399-0580c1c3b272"
+}

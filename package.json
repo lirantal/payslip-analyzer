@@ -1,21 +1,35 @@
 {
-  "name": "gemini-payslip-analyzer",
-  "version": "0.1.0",
-  "description": "Analyze salary pay slips using Google Gemini vision — extracts financial insights with bounding boxes and annotates the image.",
+  "name": "payslip-analyzer-monorepo",
   "private": true,
-  "type": "module",
+  "packageManager": "pnpm@10.18.0",
   "scripts": {
-    "analyze": "tsx src/analyze.ts"
+    "start": "pm2 start",
+    "dev": "pm2 start",
+    "reinstall": "rm -rf node_modules frontend/node_modules backend/node_modules && pnpm store prune && pnpm install",
+    "dev:frontend": "pm2 start --only frontend",
+    "dev:backend": "pm2 start --only backend",
+    "stop": "pm2 stop all",
+    "stop:frontend": "pm2 stop frontend",
+    "stop:backend": "pm2 stop backend",
+    "status": "pm2 list",
+    "logs": "pm2 logs",
+    "logs:frontend": "pm2 logs frontend",
+    "logs:backend": "pm2 logs backend",
+    "wrangler": "pnpm --filter backend exec wrangler",
+    "drizzle-kit": "pnpm --filter backend exec drizzle-kit",
+    "backend:tsx": "pnpm --filter backend exec tsx"
   },
-  "dependencies": {
-    "@google/genai": "^1.48.0",
-    "canvas": "^3.2.3",
-    "pdfjs-dist": "^4.9.155",
-    "sharp": "^0.33.0"
+  "pnpm": {
+    "overrides": {
+      "unimport": "4.1.1"
+    },
+    "onlyBuiltDependencies": [
+      "protobufjs",
+      "sharp",
+      "workerd"
+    ]
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
-    "tsx": "^4.0.0",
-    "typescript": "^5.5.0"
+    "pm2": "^6.0.14"
   }
 }

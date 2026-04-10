@@ -1,0 +1,10 @@
+---
+description: Development Practices and Guidelines
+alwaysApply: true
+---
+
+Development practices when you build code:
+1. Always run the linter for code quality static analysis in the respective `backend/` or `frontend/` projects directory: `pnpm run lint:fix` 
+2. Always run the the type checker in the respective `backend/` or `frontend/` projects directory: `pnpm run typecheck`
+3. Always run tests `pnpm run test` (in the respective `backend/` or `frontend/` projects directory)
+4. Address any issues that arise from the above to complete your coding cycle

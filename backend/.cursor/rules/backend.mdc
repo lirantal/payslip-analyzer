@@ -1,0 +1,48 @@
+---
+alwaysApply: true
+---
+# Backend Development Guidelines and Practices
+
+## About Hono Web Framework
+
+Learn about the Hono web framework by visiting the following llms.txt file and browsing the Hono documentation pages referneed from it: https://hono.dev/llms.txt
+
+## Development Workflow Checklist
+
+- You should never run the Backend Hono server yourself in your own process like `pnpm dev`.
+- You can check if the server is running by running the command `pnpm exec pm2 info backend`.
+
+
+### After Database Schema Changes
+
+1. Generate migration: `cd backend && pnpm exec drizzle-kit generate`
+2. **Apply migration**: `cd backend && pnpm exec drizzle-kit push`
+3. Restart backend if running: `pnpm exec pm2 restart backend`
+
+## Debugging the Backend
+
+- From the project's workspace root directory you can run `pnpm run logs:backend`
+- Verify database migrations are applied: `pnpm exec drizzle-kit push`
+
+## Running Admin Scripts
+
+Scripts in `backend/scripts/` should load configuration from `.env` environment file via Node.js `--env-file` flag (already in pnpm run scripts)
+
+# Reset a user's password
+
+```sh
+pnpm run reset-password user@example.com newpassword
+```
+
+# Clean up orphaned file records for a link
+
+```sh
+pnpm run cleanup-orphans lnk_xxx           # View orphaned files
+pnpm run cleanup-orphans lnk_xxx --delete  # Delete orphaned files
+```
+
+To run any TypeScript script with env vars loaded:
+
+```sh
+cd backend && pnpm exec tsx --env-file=.env scripts/my-script.ts
+```

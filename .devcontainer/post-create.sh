@@ -2,12 +2,12 @@
 set -e
 
 # Install OpenCode CLI
-#curl -fsSL https://opencode.ai/install | bash
+# curl -fsSL https://opencode.ai/install | bash
 
 # Install Snyk CLI
-curl --compressed https://static.snyk.io/cli/latest/snyk-linux-arm64 -o snyk
-chmod +x ./snyk
-sudo mv -f ./snyk /usr/local/bin/snyk
+# curl --compressed https://static.snyk.io/cli/latest/snyk-linux-arm64 -o snyk
+# chmod +x ./snyk
+# sudo mv -f ./snyk /usr/local/bin/snyk
 
 # Install 1Password CLI (op) - arm64 Linux binary
 OP_VERSION="2.32.1"
