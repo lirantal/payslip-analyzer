@@ -10,6 +10,7 @@ ignoredBuiltDependencies:
   - '@tailwindcss/oxide'
   - esbuild
   - maplibre-gl
+  - rolldown
   - unrs-resolver
   - vue-demi
 
