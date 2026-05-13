@@ -3,7 +3,7 @@ packages:
   - 'frontend'
   - 'backend'
 
-# copied over from frontend/ directory (originaly belonged there to the nuxt scaffold)
+# copied over from frontend/ directory (originally belonged there to the nuxt scaffold)
 ignoredBuiltDependencies:
   - '@parcel/watcher'
   - '@tailwindcss/oxide'
