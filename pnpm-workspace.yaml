@@ -3,11 +3,48 @@ packages:
   - 'frontend'
   - 'backend'
 
-# copied over from frontend/ directory (originaly belonged there to the nuxt scaffold)
+# copied over from frontend/ directory (originally belonged there to the nuxt scaffold)
+# allowBuilds holds the intended allowlist; ignoredBuiltDependencies keeps pnpm 10.18 compatibility
 ignoredBuiltDependencies:
   - '@parcel/watcher'
   - '@tailwindcss/oxide'
   - esbuild
   - maplibre-gl
+  - rolldown
   - unrs-resolver
   - vue-demi
+
+allowBuilds:
+  '@parcel/watcher': true
+  '@tailwindcss/oxide': true
+  esbuild: true
+  maplibre-gl: true
+  rolldown: true
+  unrs-resolver: true
+  vue-demi: true
+
+# npm security best practices
+# Source: https://github.com/lirantal/npm-security-best-practices
+
+
+# Require at least 30 days since package release (specified in minutes)
+minimumReleaseAge: 43200
+
+# Fail if a package's trust level has decreased (pnpm 10.21+)
+trustPolicy: no-downgrade
+
+# Allow specific packages or versions to bypass the check when needed
+# example:
+# trustPolicyExclude:
+#   - 'chokidar@4.0.3'
+#   - 'webpack@4.47.0 || 5.102.1'
+
+# Ignore the check for packages published more than 30 days ago (pnpm 10.27+)
+# Useful for older packages that pre-date provenance support
+trustPolicyIgnoreAfter: 43200
+
+# Strictly enforce build dependencies, otherwise pnpm will error
+strictDepBuilds: true
+
+# Block exotic subdependencies such as those pulled from  Git sources
+blockExoticSubdeps: true
