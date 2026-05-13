@@ -4,7 +4,7 @@ packages:
   - 'backend'
 
 # copied over from frontend/ directory (originally belonged there to the nuxt scaffold)
-# allowBuilds holds the intended allow-list; ignoredBuiltDependencies keeps pnpm 10.18 compatibility
+# allowBuilds holds the intended allowlist; ignoredBuiltDependencies keeps pnpm 10.18 compatibility
 ignoredBuiltDependencies:
   - '@parcel/watcher'
   - '@tailwindcss/oxide'
