@@ -109,3 +109,7 @@ cd frontend && pnpm run build
 ## License
 
 Private - All rights reserved
+
+## Contributing
+
+Please consult [CONTRIBUTING](./CONTRIBUTING.md) for guidelines on contributing to this project.
