@@ -1,7 +1,6 @@
 {
   "name": "payslip-analyzer-monorepo",
   "private": true,
-  "packageManager": "pnpm@10.18.0",
   "scripts": {
     "start": "pm2 start",
     "dev": "pm2 start",
@@ -31,5 +30,12 @@
   },
   "devDependencies": {
     "pm2": "^6.0.14"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=11.0.0"
+  },
+  "devEngines": {
+    "packageManager": { "name": "pnpm", "version": ">=11.0.0", "onFail": "download" }
   }
 }
