@@ -71,6 +71,9 @@ export async function analyzePayslip(
   const ai = new GoogleGenAI({ apiKey })
 
   const model = 'gemini-2.5-flash'
+  // TBD tests with:
+  // const model = 'gemini-3.1-flash-lite-preview'
+  // const model = 'gemini-3.1-flash-live-preview'
   const response = await ai.models.generateContent({
     model,
     contents: [{ inlineData: { mimeType: inline.mimeType, data: inline.data } }, USER_PROMPT],

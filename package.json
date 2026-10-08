@@ -14,7 +14,7 @@
     "logs": "pm2 logs",
     "logs:frontend": "pm2 logs frontend",
     "logs:backend": "pm2 logs backend",
-    "wrangler": "pnpm --filter backend exec wrangler",
+    "wrangler": "pnpm --filter ./backend exec node scripts/wrangler-cli.mjs",
     "drizzle-kit": "pnpm --filter backend exec drizzle-kit",
     "backend:tsx": "pnpm --filter backend exec tsx"
   },
