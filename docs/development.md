@@ -522,3 +522,18 @@ pnpm exec pm2 start ecosystem.config.js
 - [Cloudflare Workers Documentation](https://developers.cloudflare.com/workers)
 - [Nuxt Documentation](https://nuxt.com/docs)
 - [Cloudflare R2 Documentation](https://developers.cloudflare.com/r2)
+
+## Package-manager pin
+
+Use the exact pnpm version in `package.json#packageManager` locally and in CI.
+From the repository root, install it with:
+
+```sh
+npm install --global "$(node -p 'require("./package.json").packageManager')"
+pnpm install --frozen-lockfile
+```
+
+Upgrade the pin and matching lockfile metadata together in a maintenance PR.
+Choose a release at least 30 days old and run the project checks with it.
+Keep `.npmrc` and `pnpm-workspace.yaml` security policies enabled.
+Periodic upgrade automation is not configured.
